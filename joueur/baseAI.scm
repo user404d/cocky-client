@@ -1,7 +1,7 @@
-(module baseAI (<BaseAI> init name game start gameUpdated invalid ended)
+(module baseAI (<BaseAI> name game start gameUpdated invalid ended)
   (import chicken
           scheme
-          extras) ;; needed for format (analagous to printf)
+          (only extras format)) ;; needed for format (analagous to printf)
   (use ansiColorCoder ;;needed for ansi color coding output
        coops) ;; needed for objects w/ inheritance (similar to CLOS in common lisp)
 
@@ -10,11 +10,6 @@
     ((game initform: '() accessor: game)
      (name initform: "Scheme Player" accessor: name)
      )
-    )
-
-  
-  (define (init)
-    (make <BaseAI>)
     )
 
   
