@@ -1,10 +1,10 @@
-(module baseGameObject (<BaseGameObject>)
+(module baseGameObject (<BaseGameObject> id)
   (import chicken
           scheme)
   (use coops)
 
   
   (define-class <BaseGameObject> ()
-    ((init initform: '()))
+    ((id initform: 0 accessor: id))
     )
   )
