@@ -1,4 +1,4 @@
-(module baseGame (<BaseGame> gameObjects)
+(module baseGame (<BaseGame> gameObjects getGameObject)
   (import chicken
           scheme)
   (use coops
@@ -7,6 +7,12 @@
 
   (define-class <BaseGame> ()
     ((gameObjects initform: (make-dict) accessor: gameObjects)
-     (_gameObjectClasses initform: (make-dict)))
+     (gameObjectClasses initform: (make-dict) accessor: gameObjectClasses))
     )
+
+
+  (define-method (getGameObject (name #t) (instance <BaseGame>))
+    (dict-ref (gameObjects instance) name)
+    )
+  
   )
