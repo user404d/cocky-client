@@ -32,27 +32,23 @@
            (list empty) lst))
 
   
+  (define (split-by-eot total)
+    (match (split-by total (lambda (x) (= x 4)))
+      [(list a ... b) (values a b)]
+      [(list c) (values null c)]))
+
+  
   (define client%
     (class object%
       (super-new)
       (define _ai '())
-      (define _buffer-size 1024)
       (define _connected #f)
       (define _event-stack (make-vector 0))
-      ;; (define _event-stack (make-channel))
-      ;; (define _event-stopper (make-channel))
-      #|
-      (define _event-handler (lambda ()
-      (let loop ([evt '()])
-      (sync/enable-break (handle-evt _event-stack
-      (lambda (evt) (loop evt)))
-      (handle-evt _event-stopper
-      (lambda (evt) (printf "~a~%" done)))))))
-      |#
       (define _game '())
       (define _game-manager '())
       (define _port 0)
       (define _print-io #f)
+      (define _recvd (make-bytes 1024 0))
       (define _recvd-buffer (make-bytes 0 0))
       (define _server (string))
       (define _socket (socket #f #f))
@@ -125,23 +121,24 @@
 
       (define/public (wait-for-event event)
         (let ([data null])
-          (wait-for-new-events)
           (for ([i (in-naturals)]
-                #:break (if (> (vector-length _event-stack) 0)
+                #:break (if (and (wait-for-new-events) (> (vector-length _event-stack) 0))
                             (match-let ([(vector sent) (vector-take-right _event-stack 1)])
                               (set! _event-stack (vector-drop-right _event-stack 1))
-                              (if (and event (string=? (hash-ref sent "event") event))
-                                  (begin (set! data (hash-ref sent "data")) #t)
+                              (printf "~a~%~a~%" _event-stack sent)
+                              (if (and event (string=? (hash-ref sent `event) event))
+                                  (begin (set! data (hash-ref sent `data))
+                                         (printf "~a~%" data)
+                                         #t)
                                   (begin
-                                    (auto-handle (hash-ref sent "event") (hash-ref sent "data"))
+                                    (auto-handle (hash-ref sent 'event) (hash-ref sent 'data))
                                     #f)))
-                            #f)
-                )
-            data)))
+                            #f))
+            #t)
+          data))
 
 
       (define/private (wait-for-new-events)
-        (printf "~a~%" "ayyyy")
         (cond [(= (vector-length _event-stack) 0)
                (with-handlers ([exn:fail:read? (lambda (err)
                                                  (begin (disconnect)
@@ -152,19 +149,15 @@
                                                    (handle-error 'CANNOT_READ_SOCKET err
                                                                  "Error reading socket.")))])
                  (for ([i (in-naturals)]
-                       #:break (let ([recv (read-bytes _buffer-size (socket-recv _socket))])
-                                 (printf "~a~a~%" "lmao " recv)
-                                 (if (> (bytes-length recv) 0)
-                                     (let*-values ([(total) (bytes->list (bytes-append _recvd-buffer recv))]
-                                                   [(events partial) (match (split-by total (lambda (x)
-                                                                                              (= x 4)))
-                                                                       [(list a ... b) (values a b)]
-                                                                       [(list c) (values '() c)])])
-                                       (display "yo2")
+                       #:break (let ([num-bytes-recvd (read-bytes-avail! _recvd (socket-recv _socket))])
+                                 (if (> num-bytes-recvd 0)
+                                     (let*-values ([(total) (bytes->list (bytes-append _recvd-buffer
+                                                                           (subbytes _recvd 0 num-bytes-recvd)))]
+                                                   [(events partial) (split-by-eot total)])
                                        (set! _recvd-buffer (list->bytes partial))
                                        (cond [_print-io (printf "~a~a~a~a~%"
                                                                 (ansi 'none 'default 'magenta)
-                                                                "FROM SERVER --> " recv
+                                                                "FROM SERVER --> " events
                                                                 (ansi 'none 'default 'default))])
                                        (set! _event-stack (build-vector
                                                            (length events)
@@ -173,8 +166,7 @@
                                        (> (vector-length _event-stack) 0))
                                      #f)))
                    #t))]
-              [else #t]
-              ))
+              [else #t]))
 
 
       (define/public (play)
