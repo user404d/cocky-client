@@ -1,12 +1,10 @@
-(module baseGameObject racket
+(module base-game-object racket
   (provide base-game-object%)
 
   
   (define base-game-object%
     (class object%
-      (init [id "0"])
       (super-new)
-      (define _id id)
+      (init-field [id "0"])
       (define/public (get-id)
-        _id)))
-  )
+        id))))

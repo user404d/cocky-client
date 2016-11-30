@@ -7,14 +7,13 @@
   
   (define base-ai%
     (class object%
-      (init game)
       (super-new)
-      (define _game game)
-      (define _name "Racket Player")
+      (init-field game)
+      (field (name "Racket Player"))
       (define/public (get-name)
-        _name)
+        name)
       (define/public (set-name new-name)
-        (set! _name new-name))
+        (set! name new-name))
       (define/public (start)
         (~a "Implement me!"))
       (define/public (game-updated)

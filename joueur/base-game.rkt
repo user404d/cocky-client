@@ -1,4 +1,4 @@
-(module baseGame racket
+(module base-game racket
   (provide base-game%)
 
 
@@ -10,6 +10,4 @@
       (define/public (get-game-object id)
         (hash-ref game-objects id #f))
       (define/public (set-game-object id class-name)
-        (hash-set! game-objects id (new (hash-ref game-object-classes class-name)))))
-    )
-  )
+        (hash-set! game-objects id (new (hash-ref game-object-classes class-name)))))))

@@ -52,14 +52,16 @@
       (define _recvd-buffer (make-bytes 0 0))
       (define _server (string))
       (define _socket (socket #f #f))
+
       (define/public (connected?)
         (values _connected (socket-send _socket) (socket-recv _socket)))
+
       (define/public (connect server port options)
         (begin
           (set! _server server)
           (set! _port (string->number port))
           (set! _print-io (hash-ref options "print-io" #f))
-          (printf "~a~a~a~a~%" (ansi 'none 'default 'cyan) "Connecting to: "
+          (printf "~a~a~a~a~%" (ansi 'none 'cyan 'default) "Connecting to: "
                   (ansi 'none 'default 'default)
                   (string-append server ":" port))
           (with-handlers ([exn:fail?
@@ -87,12 +89,15 @@
         (begin (set! _game new-game)
                (set! _ai ai)
                (set! _game-manager (new game-manager% [game new-game]))))
-      
+
+      (define/public (set-constants constants)
+        (send _game-manager set-constants constants))
+
       (define/private (send-raw bstr)
         (begin
           (cond [_print-io
                  (printf "~a~a~a~a~%"
-                         (ansi 'none 'default 'megenta)
+                         (ansi 'none 'magenta 'default)
                          "TO SERVER <-- " (bytes->string/locale bstr)
                          (ansi 'none 'default 'default))])
           (with-handlers ([exn:fail?
@@ -125,10 +130,10 @@
                 #:break (if (and (wait-for-new-events) (> (vector-length _event-stack) 0))
                             (match-let ([(vector sent) (vector-take-right _event-stack 1)])
                               (set! _event-stack (vector-drop-right _event-stack 1))
-                              (printf "~a~%~a~%" _event-stack sent)
+                              ;; (printf "~a~%~a~%" _event-stack sent)
                               (if (and event (string=? (hash-ref sent `event) event))
                                   (begin (set! data (hash-ref sent `data))
-                                         (printf "~a~%" data)
+                                         ;; (printf "~a~%" data)
                                          #t)
                                   (begin
                                     (auto-handle (hash-ref sent 'event) (hash-ref sent 'data))
@@ -156,7 +161,7 @@
                                                    [(events partial) (split-by-eot total)])
                                        (set! _recvd-buffer (list->bytes partial))
                                        (cond [_print-io (printf "~a~a~a~a~%"
-                                                                (ansi 'none 'default 'magenta)
+                                                                (ansi 'none 'magenta 'default)
                                                                 "FROM SERVER --> " events
                                                                 (ansi 'none 'default 'default))])
                                        (set! _event-stack (build-vector
@@ -169,7 +174,14 @@
               [else #t]))
 
 
-      (define/public (play)
+      (define/public (play player-id)
+        (set-field! player _ai (send _game get-game-object player-id))
+
+        (with-handlers ([exn:fail? (lambda (err)
+                                     (handle-error 'AI_ERRORED err
+                                                   "AI errored when game initially started"))])
+          (send _ai start)
+          (send _ai game-updated))
         (wait-for-event #f))
 
 
@@ -183,21 +195,21 @@
           (dynamic-send this (string->symbol (string-append "auto-handle-" event)) data)))
 
 
-      (define/private (auto-handle-order data)
-        (let ([args (deserialize (hash-ref data "args") _game)])
+      (define/public (auto-handle-order data)
+        (let ([args (deserialize (hash-ref data 'args) _game)])
           (with-handlers ([exn:fail? (lambda (err)
                                        (begin (disconnect)
                                               (handle-error 'AI_ERRORED err (string-append
                                                                              "AI errored in order '"
-                                                                             (hash-ref data "name")
+                                                                             (hash-ref data 'name)
                                                                              "'."))))])
-            (let ([returned (dynamic-send _ai (string->symbol (hash-ref data "name")) args)])
-              (send-event "finished" (make-hash `((orderIndex . ,(hash-ref data "index"))
+            (let ([returned (dynamic-send _ai (string->symbol (hash-ref data 'name)) args)])
+              (send-event "finished" (make-hash `((orderIndex . ,(hash-ref data 'index))
                                                   (returned . ,returned))))))))
 
 
-      (define/private (auto-handle-delta delta)
-        (let ([can-play (null? (send _ai player))])
+      (define/public (auto-handle-delta delta)
+        (let ([can-play (null? (get-field player _ai))])
           (with-handlers ([exn:fail? (lambda (err)
                                        (begin (disconnect)
                                               (handle-error 'DELTA_MERGE_FAILURE err
@@ -210,41 +222,40 @@
                             (send _ai game-updated))])))
 
       
-      (define/private (auto-handle-invalid data)
+      (define/public (auto-handle-invalid data)
         (with-handlers ([exn:fail? (lambda (err)
                                      (begin (disconnect)
                                             (handle-error 'AI_ERRORED err "AI errored in invalid.")))])
-          (send _ai invalid (hash-ref data "message"))))
+          (send _ai invalid (hash-ref data 'message))))
 
       
-      (define/private (auto-handle-fatal data)
-        ;;potentially useless
+      (define/public (auto-handle-fatal data)
         (begin (disconnect)
                (handle-error 'FATAL_EVENT (exn "" (current-continuation-marks))
                              (string-append "got fatal event from server: "
-                                            (hash-ref data "message")))))
+                                            (hash-ref data 'message)))))
 
       
-      (define/private (auto-handle-over data)
-        (let* ([won? (send (send _ai player) won)]
-               [reason (if won? (send (send _ai player) reason-won) (send (send _ai player) reason-lost))]
+      (define/public (auto-handle-over data)
+        (let* ([player (get-field player _ai)]
+               [won? (get-field won? player)]
+               [reason (if won?
+                           (get-field reason-won player)
+                           (get-field reason-lost player))]
                [message (if won? "I Won!" "I Lost :C")])
-          (printf "~a~a ~a ~a ~a~a~%" (ansi 'none 'default 'green)
+          (printf "~a~a ~a ~a ~a~a~%" (ansi 'none 'green 'default)
                   "Game is over." message "because" reason
                   (ansi 'none 'default 'default))
           (with-handlers ([exn:fail? (lambda (err)
                                        (begin (disconnect)
                                               (handle-error 'AI_ERRORED err "AI errored in ended().")))])
             (send _ai ended won? reason))
-          (cond [(and (hash? data) (hash-has-key? data "message"))
-                 (printf "~a~a~a~%" (ansi 'none 'default 'cyan)
-                         (hash-ref data "message") (ansi 'none 'default 'default))])
+          (cond [(and (hash? data) (hash-has-key? data 'message))
+                 (printf "~a~a~a~%" (ansi 'none 'cyan 'default)
+                         (hash-ref data 'message) (ansi 'none 'default 'default))])
           (disconnect)
-          (print "exiting with code 0")
-          ;; (exit 0)
-          ))
-      )
-    )
+          ;; (print "exiting with code 0")
+          (exit 0)
+          ))))
 
-  (define client (new client%))
-  )
+  (define client (new client%)))

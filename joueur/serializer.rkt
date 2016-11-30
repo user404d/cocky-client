@@ -4,30 +4,26 @@
   (provide is-game-obj-ref? is-obj? serialize deserialize)
 
 
-
   (define (is-game-obj-ref? d)
-    (and (hash? d) (= (hash-count d) 1) (hash-has-key? d "id"))
-    )
+    (and (hash? d) (= (hash-count d) 1) (hash-has-key? d 'id)))
   
   (define (is-obj? obj)
-    (or (hash? obj) (vector? obj) (subclass? obj base-game-object%))
-    )
+    (or (hash? obj) (vector? obj) (subclass? obj base-game-object%)))
   
   (define (serialize data)
     (cond [(not (is-obj? data)) data]
-          [(subclass? data base-game-object%) (make-hash `(("id" . ,(send data get-id))))]
+          [(subclass? data base-game-object%) (make-hash `((id . ,(send data get-id))))]
           [else (let ([serialized (make-hash)])
                   (begin
                     (hash-for-each data (lambda (k v)
                                           (if (is-obj? v)
                                               (hash-set! serialized k (serialize v))
                                               (hash-set! serialized k v))))
-                    serialized))])
-    )
+                    serialized))]))
 
   (define (deserialize data game)
     (cond [(not (is-obj? data)) data]
-          [(is-game-obj-ref? data) (send game get-game-object (hash-ref data "id"))]
+          [(is-game-obj-ref? data) (send game get-game-object (hash-ref data 'id))]
           [else (let ([deserialized (if (hash? data) (make-hash) '())])
                   (begin
                     (if (hash? deserialized)
@@ -39,7 +35,5 @@
                                                               (if (is-obj? v)
                                                                   (deserialize v game)
                                                                   v)))))
-                    deserialized))]
-          ))
-  )
+                    deserialized))])))
 
