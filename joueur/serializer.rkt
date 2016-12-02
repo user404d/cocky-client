@@ -8,32 +8,34 @@
     (and (hash? d) (= (hash-count d) 1) (hash-has-key? d 'id)))
   
   (define (is-obj? obj)
-    (or (hash? obj) (vector? obj) (subclass? obj base-game-object%)))
-  
-  (define (serialize data)
-    (cond [(not (is-obj? data)) data]
-          [(subclass? data base-game-object%) (make-hash `((id . ,(send data get-id))))]
-          [else (let ([serialized (make-hash)])
-                  (begin
-                    (hash-for-each data (lambda (k v)
-                                          (if (is-obj? v)
-                                              (hash-set! serialized k (serialize v))
-                                              (hash-set! serialized k v))))
-                    serialized))]))
+    (or (hash? obj) (is-a? obj object%)))
 
+  (define (serialize data)
+    (cond [(not (or (vector? data) (is-obj? data))) data]
+          [(is-a? data base-game-object%) (make-hash `((id . ,(send data get-id))))]
+          [else (let ([seq (if (hash? data) (in-hash data) (in-indexed data))])
+                  (for/hash ([(key value) seq])
+                    (if (is-obj? value)
+                        (values key (serialize value))
+                        (values key value))))]))
+
+  (define (produce-hash data game)
+    (for/hash ([(key value) (in-hash data)])
+      (if (or (vector? value) (is-obj? value))
+          (values key (deserialize value game))
+          (values key value))))
+
+  (define (produce-vector data game)
+    (for/vector #:length (vector-length data)
+                ([value (in-vector data)])
+                (if (or (vector? value) (is-obj? value))
+                    (deserialize value game)
+                    value)))
+  
   (define (deserialize data game)
-    (cond [(not (is-obj? data)) data]
+    (cond [(not (or (vector? data) (is-obj? data))) data]
           [(is-game-obj-ref? data) (send game get-game-object (hash-ref data 'id))]
-          [else (let ([deserialized (if (hash? data) (make-hash) '())])
-                  (begin
-                    (if (hash? deserialized)
-                        (hash-for-each data (lambda (k v)
-                                              (if (is-obj? v)
-                                                  (hash-set! deserialized k (deserialize v game))
-                                                  (hash-set! deserialized k v))))
-                        (set! deserialized (vector-map data (lambda (v)
-                                                              (if (is-obj? v)
-                                                                  (deserialize v game)
-                                                                  v)))))
-                    deserialized))])))
+          [else (if (hash? data)
+                    (produce-hash data game)
+                    (produce-vector data game))])))
 

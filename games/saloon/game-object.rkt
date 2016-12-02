@@ -7,4 +7,4 @@
     (class base-game-object%
       (super-new)
       (field [game-object-name ""]
-             [logs #()]))))
+             [logs (vector)]))))

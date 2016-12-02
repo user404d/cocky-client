@@ -6,10 +6,7 @@
   (define bottle%
     (class game-object%
       (super-new)
-      (inherit-field id
-                     game-object-name
-                     logs)
       (field [direction ""]
              [drunk-direction ""]
-             [destroyed? false]
+             [is-destroyed false]
              [tile null]))))

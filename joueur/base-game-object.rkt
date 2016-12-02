@@ -6,5 +6,4 @@
     (class object%
       (super-new)
       (init-field [id "0"])
-      (define/public (get-id)
-        id))))
+      (define/public (get-id) id))))

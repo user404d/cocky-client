@@ -8,7 +8,7 @@
     (class game-object%
       (super-new)
       (field [call-in-tile null]
-             [can-call-in? false]
+             [can-call-in false]
              [owner null]
              [tile null])
 

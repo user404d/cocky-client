@@ -7,9 +7,9 @@
     (class game-object%
       (super-new)
       (field [client-type ""]
-             [cowboys #()]
+             [cowboys (vector)]
              [kills 0]
-             [lost? false]
+             [lost false]
              [name ""]
              [opponent null]
              [reason-lost ""]
@@ -18,5 +18,5 @@
              [score 0]
              [siesta 0]
              [time-remaining 0]
-             [won? false]
+             [won false]
              [young-gun null]))))

@@ -4,23 +4,29 @@
   (provide cowboy%)
 
 
+  (define (get-tile dir tile)
+    (dynamic-get-field (string->symbol (string-append "tile-" dir)) tile))
+
   (define cowboy%
     (class game-object%
       (super-new)
-      (inherit-field id
-                     game-object-name
-                     logs)
-      (field [can-move? false]
+      (field [can-move false]
              [drunk-direction ""]
              [focus 0]
              [health 0]
-             [dead? false]
-             [drunk? false]
+             [is-dead false]
+             [is-drunk false]
              [job ""]
              [owner null]
              [tile null]
              [tolerance 0]
              [turns-busy 0])
+
+      (define/public (neighbors)
+        (vector-filter-not null? `#(,(get-tile "east" tile)
+                                    ,(get-tile "west" tile)
+                                    ,(get-tile "south" tile)
+                                    ,(get-tile "north" tile))))
 
       (define/public (act on-tile [direction ""])
         (send client run-on-server this "act" (make-hash `((tile . ,on-tile)

@@ -20,8 +20,8 @@
                                  [(list server port) (values server port)]))
   
   
-  (define Game (make-parameter null))
-  (define AI (make-parameter null))
+  (define Game null)
+  (define AI null)
   
   
   (define (run args)
@@ -36,12 +36,12 @@
         (with-handlers ([exn:fail? (lambda (err)
                                      (handle-error 'GAME_NOT_FOUND err
                                                    (string-append "Could not find the module for game " game-name)))])
-          (Game (dynamic-require module-str 'Game))
-          (AI (dynamic-require module-str 'AI)))
+          (set! Game (dynamic-require module-str 'Game))
+          (set! AI (dynamic-require module-str 'AI)))
         (let* ([~password (hash-ref args 'password)]
                [session (hash-ref args 'session-name)]
-               [game (Game)]
-               [ai (AI)]
+               [game Game]
+               [ai AI]
                [player-name (hash-ref args 'player-name)]
                [index (hash-ref args 'player-id)]
                [game-settings (hash-ref args 'game-settings)])
