@@ -103,7 +103,6 @@
         state)
       
       (define/private (build-delta state delta)
-        ;; (pretty-print (list "building state vector" state delta resize))
         (let ([state-len (vector-length state)]
               [resize (hash-ref delta delta-list-len)])
           (for/vector #:length resize
