@@ -10,18 +10,20 @@
       (super-new)
       (init-field game)
       (field [name "Racket Player"])
+      
       (define/public (get-name) name)
+      
       (define/public (set-name new-name)
         (set-field! name this new-name))
+      
       (define/public (start)
         (printf "Implement me!~%"))
+      
       (define/public (game-updated)
         (printf "Implement me!~%"))
+      
       (define/public (invalid message)
-        (printf "~a~a ~a~a~%"
-                (ansi 'bold 'yellow 'default)
-                "Invalid:"
-                message
-                (ansi 'none 'default 'default)))
+        (printf "~a~a ~a~a~%" (ansi 'bold 'yellow) "Invalid:" message (ansi)))
+      
       (define/public (ended won reason)
         (printf "Implement me!~%")))))

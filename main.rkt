@@ -40,8 +40,8 @@
        (hash-set! args 'game-settings game-settings)]
       [("-d" "--printIO") "(debugging) print IO through the TCP socket to the terminal"
        (hash-set! args 'print-io #t)]
-      #:args (game-name) ; expect one command-line argument: <filename>
-                                        ; return the argument as a filename to compile
+      #:args (game-name)
+      
       (begin
         (hash-set! args 'game-name game-name)
         args)))

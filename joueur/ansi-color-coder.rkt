@@ -49,7 +49,9 @@
           val
           (hash-ref _background 'default))))
 
-  (define (ansi style text background)
+  (define (ansi #:style      [style 'none]
+                #:text       [text 'default]
+                #:background [background 'default])
     (string-append "\033["
                    (find-style style) ";"
                    (find-text text) ";"

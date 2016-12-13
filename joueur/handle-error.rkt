@@ -2,28 +2,17 @@
   (require "ansi-color-coder.rkt")
   (provide handle-error)
 
-  (define delimeter-color
-    (ansi 'bold 'red 'default)
-    )
-
-
-  (define error-color
-    (ansi 'bold 'red 'default)
-    )
-
-
-  (define basic-color
-    (ansi 'none 'default 'default)
-    )
-
+  
+  (define delimeter-color (ansi 'bold 'red 'default))
+  (define error-color (ansi 'bold 'red 'default))
+  (define basic-color (ansi 'none 'default 'default))
 
   (define (delimit-message message)
     (fprintf (current-error-port) "~a~a~%~a---~a~%"
             basic-color
             message
             delimeter-color
-            basic-color)
-    )
+            basic-color))
 
 
   (define (spooky-message message)
@@ -47,21 +36,18 @@
                  (GAME_NOT_FOUND . 29)
                  (MALFORMED_JSON . 30)
                  (UNAUTHENTICATED . 31)
-                 (AI_ERRORED . 42)))
-    )
+                 (AI_ERRORED . 42))))
 
 
-  (define (handle-error codeName err message)
+  (define (handle-error code-name err message)
     ;; handle errors and report them
-    (begin
-      (fprintf (current-error-port) "~a---~%~aError:~a ~a~%~a---~a~%"
+    (fprintf (current-error-port) "~a---~%~aError:~a ~a~%~a---~a~%"
               delimeter-color
               error-color
               basic-color
               codeName
               delimeter-color
-              basic-color
-              )
+              basic-color)
       (if (null? message)
           (if (null? err)
               (spooky-message "<err and message were null>")
@@ -73,18 +59,9 @@
       (if (or (null? err) (null? (exn-continuation-marks err)))
           (error-value->string-handler)
           (delimit-message (exn-continuation-marks err)))
-      (let ([errorCode (hash-ref error-codes codeName #f)])
-        (begin
-          (flush-output)
-          (flush-output (current-error-port))
-          (if errorCode
-              (exit errorCode)
-              ;; (fprintf (current-error-port) "exiting with error code: ~a\n" errorCode)
-              (exit 0)
-              ;; (fprintf (current-error-port) "exiting with error code: 0\n")
-              )
-          )
-        )
-      )
-    )
-  )
+      (define error-code (hash-ref error-codes code-name #f))
+      (flush-output)
+      (flush-output (current-error-port))
+      (if errorCode
+          (exit errorCode)
+          (exit 0))))

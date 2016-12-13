@@ -1,8 +1,7 @@
 (module game-manager racket
   (require "base-game.rkt"
            "base-game-object.rkt"
-           "serializer.rkt"
-           "test.rkt")
+           "serializer.rkt")
   (provide game-manager%)
 
 
@@ -51,16 +50,15 @@
              [delta-list-len null])
 
       (define/public (set-constants constants)
-        (let ([delta-list-len-sym
-               (string->symbol (hash-ref constants 'DELTA_LIST_LENGTH))])
-          (set-field! constants this constants)
-          (set-field! delta-removed this (hash-ref constants 'DELTA_REMOVED))
-          (set-field! delta-list-len this delta-list-len-sym)))
+        (define delta-list-len-sym (string->symbol (hash-ref constants 'DELTA_LIST_LENGTH)))
+        (set-field! constants this constants)
+        (set-field! delta-removed this (hash-ref constants 'DELTA_REMOVED))
+        (set-field! delta-list-len this delta-list-len-sym))
       
       (define/public (apply-delta-state delta)
         (cond [(hash-has-key? delta 'gameObjects)
-                 (init-game-objects (hash-ref delta 'gameObjects))])
-          (merge-delta game (deserialize delta game) mergeable-key-update))
+               (init-game-objects (hash-ref delta 'gameObjects))])
+        (merge-delta game delta mergeable-key-update))
       
       (define/private (init-game-objects delta-game-objects)
         (hash-for-each delta-game-objects
@@ -70,43 +68,5 @@
                                   (send game set-game-object key
                                         (hash-ref v 'gameObjectName))])))))
 
-      (define/private (merge-delta state delta state-key-update)
-        (let*-values ([(~delta resize?) (if (and (hash? delta) (hash-has-key? delta delta-list-len))
-                                            (values (build-delta state delta) #t)
-                                            (values delta #f))]
-                      [(seq) (if (hash? ~delta)
-                                 (values (in-hash ~delta))
-                                 (values (in-parallel (in-naturals) (in-vector ~delta))))])
-          (cond [resize? (set! state (make-vector (vector-length ~delta) #f))])
-          (for ([(key value) seq])
-            (let-values ([(state-key state-has-key?)
-                          (state-key-update state key)])
-              (cond [(eq? value delta-removed)
-                     (cond [state-has-key? (state-set! state state-key #f)])]
-                    [(is-a? value object%)
-                     (state-set! state state-key value)]
-                    [(and state-has-key? (is-obj? value))
-                     (let ([next-state (state-ref state state-key)])
-                       (state-set! state state-key (merge-delta next-state
-                                                    value (cond [(vector? next-state)
-                                                                 vec-key-update]
-                                                                [(hash? next-state)
-                                                                 hash-key-update]
-                                                                [else mergeable-key-update]))))]
-                    [(and (not state-has-key?) (hash? value))
-                     (let-values ([(next-state key-update)
-                                          (if (hash-has-key? value delta-list-len)
-                                              (values (vector) vec-key-update)
-                                              (values (make-hash) hash-key-update))])
-                              (state-set! state state-key (merge-delta next-state value key-update)))]
-                    [else (state-set! state state-key value)]))))
-        state)
-      
-      (define/private (build-delta state delta)
-        (let ([state-len (vector-length state)]
-              [resize (hash-ref delta delta-list-len)])
-          (for/vector #:length resize
-                      ([i (in-range resize)])
-                      (let ([delta-val (hash-ref delta (num-to-sym i) #f)]
-                            [state-val (if (< i state-len) (vector-ref state i) #f)])
-                        (or delta-val state-val))))))))
+      ;; TODO: Implement this in a NICE way
+      (define/private (merge-delta state delta)))))
