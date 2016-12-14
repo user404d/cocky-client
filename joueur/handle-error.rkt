@@ -3,23 +3,23 @@
   (provide handle-error)
 
   
-  (define delimeter-color (ansi 'bold 'red 'default))
-  (define error-color (ansi 'bold 'red 'default))
-  (define basic-color (ansi 'none 'default 'default))
+  (define delimeter-color (ansi 'bold 'red))
+  (define error-color (ansi 'bold 'red))
+
 
   (define (delimit-message message)
     (fprintf (current-error-port) "~a~a~%~a---~a~%"
-            basic-color
+            reset
             message
             delimeter-color
-            basic-color))
+            reset))
 
 
   (define (spooky-message message)
     (fprintf (current-error-port) "~aSpooky error. ~a~a~%"
             (ansi 'blink 'green 'blue)
             message
-            basic-color))
+            reset))
 
   
   (define error-codes
@@ -44,10 +44,10 @@
     (fprintf (current-error-port) "~a---~%~aError:~a ~a~%~a---~a~%"
               delimeter-color
               error-color
-              basic-color
+              reset
               codeName
               delimeter-color
-              basic-color)
+              reset)
       (if (null? message)
           (if (null? err)
               (spooky-message "<err and message were null>")

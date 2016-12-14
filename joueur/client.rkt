@@ -55,7 +55,7 @@
         (set-field! server this remote-server)
         (set-field! port this (string->number remote-port))
         (set-field! print-io this (hash-ref options 'print-io #f))
-        (printf "~a~a~a~a~%" (ansi #:text 'cyan) "Connecting to: " (ansi)
+        (printf "~a~a~a~a~%" (ansi #:text 'cyan) "Connecting to: " reset
                 (string-append server ":" remote-port))
         (with-handlers ([exn:fail? could-not-connect])
           (let-values ([(recv-t send-t) (tcp-connect/enable-break server port)])
@@ -88,10 +88,11 @@
       (define/private (send-raw bstr)
         (cond [print-io
                (printf "~a~a~a~a~%" (ansi #:text 'magenta)
-                       "TO SERVER <-- " (bytes->string/locale bstr) (ansi))])
+                       "TO SERVER <-- " (bytes->string/locale bstr) reset)])
         (with-handlers ([exn:fail? disconnected-unexpectedly])
           (write-bytes bstr (Socket-send socket))))
-      
+
+
       (define/public (send-event event data)
         (send-raw (bytes-append
                    (jsexpr->bytes (make-hash `((sentTime . ,(date->string (current-date)))
@@ -130,12 +131,11 @@
         (cond [(= (vector-length event-stack) 0)
                (with-handlers ([exn:fail:read? malformed-json]
                                [exn:fail? cannot-read-socket])
+                 
                  (for ([_ (in-naturals)]
                        #:break
                        (let ([num-bytes-recvd (read-bytes-avail! recvd (Socket-recv socket))])
-                         ;; TODO: fix this shit so it's nicer
-                         (match recvd
-                           [(bytes byte ... 0 ...)])
+                         ;; TODO: fix this shit so it's nicer, see process-incoming-events
                          (if (> num-bytes-recvd 0)
                              (begin
                                (define new-bytes (subbytes recvd 0 num-bytes-recvd))
@@ -146,7 +146,7 @@
                                                        (ansi #:text 'magenta)
                                                        "FROM SERVER --> "
                                                        events
-                                                       (ansi))])
+                                                       reset)])
                                (set-field! event-stack this (build-vector
                                                              (length events)
                                                              (lambda (i)
@@ -155,6 +155,24 @@
                              #f)))
                    #t))]
               [else #t]))
+
+
+      (define/private (process-incoming-events num-bytes-recvd)
+        (define new-bytes (subbytes recvd 0 num-bytes-recvd))
+        (define total (bytes-append recvd-buffer new-bytes))
+        (define-values (events partial)
+          (split-by-eot (bytes->list total)))
+        (set-field! recvd-buffer this (list->bytes partial))
+        (cond [print-io (printf "~a~a~a~a~%"
+                                (ansi #:text 'magenta)
+                                "FROM SERVER --> "
+                                events
+                                reset)])
+        (set-field! event-stack this
+          (build-vector (length events)
+            (lambda (i)
+              (bytes->jsexpr (list->bytes (list-ref events i))))))
+        (> (vector-length event-stack) 0))
 
       ;; Play game
 
@@ -211,11 +229,11 @@
               (values (get-field reason-won player) "I won! :D")
               (values (get-field reason-lost player) "I lost. :C")))
         (printf "~a~a ~a ~a ~a~a~%" (ansi #:text 'green)
-                "Game is over." message "because" reason (ansi))
+                "Game is over." message "because" reason reset)
         (with-handlers ([exn:fail? (cut ai-errored <> "AI errored in (ended).")])
           (send ai ended won? reason))
         (cond [(and (hash? data) (hash-has-key? data 'message))
-               (printf "~a~a~a~%" (ansi #:text 'cyan) (hash-ref data 'message) (ansi))])
+               (printf "~a~a~a~%" (ansi #:text 'cyan) (hash-ref data 'message) reset)])
         (disconnect)
         (exit 0))
 
