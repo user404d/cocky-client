@@ -44,6 +44,8 @@ client.d
 *.userprefs
 
 # Build results
+compile/
+joueur/compile
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
