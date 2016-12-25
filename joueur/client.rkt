@@ -6,7 +6,8 @@
          "handle-error.rkt"
          json
          "serializer.rkt"
-         srfi/26)
+         srfi/26
+         "utilities.rkt")
 
 (provide client)
 
@@ -102,12 +103,12 @@
             #:break
             (cond [(and (wait-for-new-events)
                         (> (vector-length event-stack) 0))
-                   (define sent (first event-stack))
+                   (define sent (vector-ref event-stack 0))
                    (set-field! event-stack this (vector-drop event-stack 1))
                    (if (and event (string=? (hash-ref sent 'event) event))
-                       (or #t (set! data (hash-ref sent 'data)))
-                       (and #f (auto-handle (hash-ref sent 'event)
-                                            (hash-ref sent 'data))))]
+                       (begin (set! data (hash-ref sent 'data)) #t)
+                       (begin (auto-handle (hash-ref sent 'event)
+                                           (hash-ref sent 'data)) #f))]
                   [else #f]))
         #t)
       data)
@@ -117,10 +118,14 @@
       (cond [(= (vector-length event-stack) 0)
              (with-handlers ([exn:fail:read? malformed-json]
                              [exn:fail? cannot-read-socket])
-               (define num-bytes-recvd (read-bytes-avail! recvd (Socket-recv socket)))
-               (if (> num-bytes-recvd 0)
-                   (process-incoming-events num-bytes-recvd)
-                   (wait-for-new-events)))]
+               (for ([_ (in-naturals)])
+                 #:break
+                 (let ([num-bytes-recvd
+                        (read-bytes-avail! recvd (Socket-recv socket))])
+                   (if (> num-bytes-recvd 0)
+                       (process-incoming-events num-bytes-recvd)
+                       #f))
+                 #f))]
             [else #t]))
 
 
@@ -132,14 +137,14 @@
         (if (= (bytes-ref recvd (sub1 num-bytes-recvd)) 4)
             (values potential-events (bytes))
             (values (drop-right potential-events 1) (last potential-events))))
-      (set-field! recvd this partial)
+      (set-field! recvd-buffer this partial)
       (cond [print-io (printf "~a~a~a~a~%"
                               (ansi #:text 'magenta)
                               "FROM SERVER --> "
                               events
                               reset)])
       (set-field! event-stack this
-                  (for/vector #:length (length events) ([event (in-list events)])
+                  (for/vector #:length (length events) ([event events])
                               (bytes->jsexpr event)))
       (> (vector-length event-stack) 0))
 
@@ -156,7 +161,8 @@
 
     (define/private (auto-handle event data)
       (with-handlers ([exn:fail? (cut cannot-auto-handle <> event)])
-        (dynamic-send this (string->symbol (string-append "auto-handle-" event)) data)))
+        (define handle (string->symbol (string-append "auto-handle-" event)))
+        (dynamic-send this handle data)))
 
 
     (define/public (auto-handle-order data)
@@ -164,7 +170,8 @@
       (with-handlers ([exn:fail? (cut ai-errored <> (string-append "AI errored in order '"
                                                                    (hash-ref data 'name)
                                                                    "'.")) ])
-        (define returned (dynamic-send ai (string->symbol (hash-ref data 'name)) args))
+        (define order (string->symbol (hash-ref data 'name)))
+        (define returned (dynamic-send ai order args))
         (send-event "finished" (make-hash `((orderIndex . ,(hash-ref data 'index))
                                             (returned . ,returned))))))
 
@@ -241,6 +248,7 @@
       (disconnect)
       (handle-error 'AI_ERRORED err str))
 
+    
     (define (delta-merge-failure err str)
       (handle-error 'DELTA_MERGE_FAILURE err str))))
 

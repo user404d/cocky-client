@@ -2,46 +2,9 @@
 
 (require "base-game.rkt"
          "base-game-object.rkt"
-         "serializer.rkt")
+         "utilities.rkt")
 
 (provide game-manager%)
-
-
-(define (camel-to-hyphen str)
-  (regexp-replace* #px"[[:upper:]]"
-                   str (lambda (any) (string-append "-" (string-downcase any)))))
-
-(define (num-to-sym num)
-  (string->symbol (number->string num)))
-
-(define (mergeable? state)
-  (or (is-a? state base-game%) (is-a? state base-game-object%)))
-
-(define (is-field? state field-name)
-  (findf (lambda (field) (eq? field field-name)) (field-names state)))
-
-(define (vec-key-update state key)
-  (values key (< key (vector-length state))))
-
-(define (mergeable-key-update state key)
-  (let ([state-key (string->symbol (camel-to-hyphen (symbol->string key)))])
-    (values state-key (and (not (null? state)) (is-field? state state-key)))))
-
-(define (hash-key-update state key)
-  (let ([state-key (symbol->string key)])
-    (values state-key (hash-has-key? state state-key))))
-
-(define (state-ref state state-key)
-  (cond [(vector? state) (vector-ref state state-key)]
-        [(mergeable? state) (dynamic-get-field state-key state)]
-        [else (hash-ref state state-key)]))
-
-(define (state-set! state state-key value)
-  (cond [(vector? state) (vector-set! state state-key value)]
-        [(mergeable? state) (dynamic-set-field! state-key state value)]
-        [else (if (immutable? state)
-                  (hash-set state state-key value)
-                  (hash-set! state state-key value))]))
 
 (define game-manager%
   (class object%
@@ -51,17 +14,20 @@
            [delta-removed null]
            [delta-list-len null])
 
+
     (define/public (set-constants constants)
       (define delta-list-len-sym (string->symbol (hash-ref constants 'DELTA_LIST_LENGTH)))
       (set-field! constants this constants)
       (set-field! delta-removed this (hash-ref constants 'DELTA_REMOVED))
       (set-field! delta-list-len this delta-list-len-sym))
-    
+
+
     (define/public (apply-delta-state delta)
       (cond [(hash-has-key? delta 'gameObjects)
              (init-game-objects (hash-ref delta 'gameObjects))])
-      (merge-delta game delta mergeable-key-update))
-    
+      (merge-object game delta))
+
+
     (define/private (init-game-objects delta-game-objects)
       (hash-for-each delta-game-objects
                      (lambda (k v)
@@ -70,6 +36,64 @@
                                 (send game set-game-object key
                                       (hash-ref v 'gameObjectName))])))))
 
-    ;; TODO: Implement this in a NICE way
-    (define/private (merge-delta state delta)
-      )))
+
+    (define/private (merge-object state delta)
+      (for ([(key value) delta])
+        (define field-id (to-racket-field key))
+        (:> field-id state (merge (<: field-id state) value)))
+      ;; return mutated state
+      state)
+
+
+    (define/private (merge-vector state delta)
+      (define length (hash-ref delta delta-list-len))
+      (define state-length (vector-length state))
+      ;; builds new vector up
+      (for/vector #:length length
+                  ([i (in-range length)])
+                  (if (hash-has-key? delta (num-to-sym i))
+                      ;; merge old state with delta
+                      (let ([delta-elem (hash-ref delta (num-to-sym i))]
+                            [state-elem (if (< i state-length)
+                                            (vector-ref state i)
+                                            null)])
+                        (merge state-elem delta-elem))
+                      ;; no delta to merge, keep old state
+                      (vector-ref state i))))
+
+
+    (define/private (merge-hash state delta)
+      (for ([(key value) delta])
+        (define str-key (symbol->string key))
+        (hash-set! state str-key
+                   (if (hash-has-key? state str-key)
+                       ;; may need to merge
+                       (let ([state-val (hash-ref state str-key)])
+                         (merge state-val value))
+                       ;; no state to merge
+                       value)))
+      ;; return mutated state
+      state)
+
+
+    (define/match (merge prev next)
+      [(_ (and (hash-table ('id id)) (app hash-count 1)))
+       ;; game reference, inflate it
+       (send game get-game-object id)]
+      [((? object? _) (or (hash-table ('id _) (field value) ..1)
+                          (hash-table (field value) ..1)))
+       ;; object description, apply changes
+       (merge-object prev next)]
+      [((vector _ ...) (hash-table ('&LEN length)
+                                   (index value) ...))
+       ;; vector
+       (merge-vector prev next)]
+      [((hash-table (_ _) ...) (hash-table (_ _) ..1))
+       ;; hash
+       (merge-hash prev next)]
+      [(_ '&RM)
+       ;; delete flag, return null
+       null]
+      [(_ _)
+       ;; primitive, discard prev; return next
+       next])))

@@ -1,17 +1,10 @@
 #lang racket
 
 (require "base-game.rkt"
-         "base-game-object.rkt")
+         "base-game-object.rkt"
+         "utilities.rkt")
 
-(provide is-game-obj-ref? is-obj? serialize deserialize)
-
-
-(define (is-game-obj-ref? d)
-  (and (hash? d) (= (hash-count d) 1) (hash-has-key? d 'id)))
-
-
-(define (is-obj? obj)
-  (or (hash? obj) (is-a? obj object%)))
+(provide serialize deserialize)
 
 
 (define (serialize data)
