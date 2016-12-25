@@ -23,7 +23,7 @@
 
 
     (define/public (neighbors)
-      (vector-filter-not null? (vector tile-east
-                                       tile-north
-                                       tile-south
-                                       tile-west)))))
+      (vector-filter object? (vector tile-east
+                                     tile-north
+                                     tile-south
+                                     tile-west)))))

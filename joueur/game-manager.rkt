@@ -77,23 +77,21 @@
 
 
     (define/match (merge prev next)
+      ;; game reference, inflate it
       [(_ (and (hash-table ('id id)) (app hash-count 1)))
-       ;; game reference, inflate it
        (send game get-game-object id)]
+      ;; object description, apply changes to prev
       [((? object? _) (or (hash-table ('id _) (field value) ..1)
                           (hash-table (field value) ..1)))
-       ;; object description, apply changes
        (merge-object prev next)]
+      ;; vector, merge prev and next
       [((vector _ ...) (hash-table ('&LEN length)
                                    (index value) ...))
-       ;; vector
        (merge-vector prev next)]
+      ;; hash, merge prev and next
       [((hash-table (_ _) ...) (hash-table (_ _) ..1))
-       ;; hash
        (merge-hash prev next)]
-      [(_ '&RM)
-       ;; delete flag, return null
-       null]
-      [(_ _)
-       ;; primitive, discard prev; return next
-       next])))
+      ;; delete flag, return null
+      [(_ '&RM) null]
+      ;; primitive, discard prev; return next
+      [(_ _) next])))

@@ -1,32 +1,35 @@
 #lang racket
 
 (require "../../joueur/base-ai.rkt"
-         "../../joueur/utilities.rkt")
+         "../../joueur/utilities.rkt"
+         srfi/26)
 
 (provide ai%)
 
 
-(define (not-pathable tile)
-  (not (or (<: 'furnishing tile) (<: 'cowboy tile))))
+(define (pathable tile)
+  (not (or (object? (<: 'furnishing tile))
+           (object? (<: 'cowboy tile)))))
 
 
 (define (find-path initial target)
-  (define from (make-hash '((,initial . null))))
-  (let expand ([frontier (vector initial)])
+  (define from (make-hash `((,initial . null))))
+  (let bfs ([frontier (vector initial)])
     (match frontier
-      [(app vector-length 0) (vector)]
+      [(app vector-length 0) (vector)]  ;return empty path
       [(vector top rest ...)
        (define neighbors (send top neighbors))
-       (cond [(vector-member target neighbors)
+       (cond [(vector-member target neighbors) ;reconstruct path
               (do ([step top (hash-ref from step)]
                    [steps null (cons step steps)])
-                  [(null? (hash-ref from step)) (list->vector steps)])]
+                  [(eq? step initial) (list->vector steps)])]
              [else
-              (define added-neighbors
-                (for/vector ([neighbor (vector-filter not-pathable neighbors)]
-                             #:unless (hash-ref from neighbor #f))
-                  (hash-set! from neighbor top)))
-              (expand (vector-append (list->vector rest) added-neighbors))])])))
+              (define added
+                (for/vector ([neighbor (vector-filter pathable neighbors)]
+                             #:unless (hash-has-key? from neighbor))
+                  (hash-set! from neighbor top)
+                  neighbor))
+              (bfs (vector-append (list->vector rest) added))])])))
 
 
 (define ai%
@@ -44,8 +47,7 @@
             #:break (cond [(<: 'is-piano furniture)
                            (set-field! target this (<: 'tile furniture))]
                           [else #f]))
-        #t)
-      (printf "~a~%" target))
+        #t))
     
     (define/public (runTurn args)
       (printf "running turn~%")
