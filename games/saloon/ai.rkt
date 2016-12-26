@@ -24,7 +24,7 @@
               (do ([step top (hash-ref from step)]
                    [steps null (cons step steps)])
                   [(eq? step initial) (list->vector steps)])]
-             [else
+             [else                             ;keep expanding
               (define added
                 (for/vector ([neighbor (vector-filter pathable neighbors)]
                              #:unless (hash-has-key? from neighbor))
@@ -38,32 +38,40 @@
     (super-new)
     (inherit-field game)
     (field [player null]
-           [target null])
-    
+           [pianos (vector)])
+
+
     (define/public (set-player player-id)
       (set-field! player this (send game get-game-object player-id)))
 
+
     (define/override (start)
-      (for ([furniture (<: 'furnishings game)]
-            #:break (cond [(<: 'is-piano furniture)
-                           (set-field! target this (<: 'tile furniture))]
-                          [else #f]))
-        #t))
-    
-    (define/public (runTurn args)
+      (set-field! pianos this (vector-filter (cut <: 'is-piano <>)
+                                             (<: 'furnishings game))))
+
+
+    (define/public (run-turn args)
       (printf "running turn~%")
-      
+
       (if (> 6 (vector-length (get-field cowboys player)))
           (send (get-field young-gun player) call-in
                 (vector-ref (get-field jobs game) (random 3)))
           (printf "failed to call in~%"))
-      
+
       (for ([cowboy (get-field cowboys player)])
         (unless (get-field is-dead cowboy)
-          (let ([path (find-path (<: 'tile cowboy) target)])
-            (if (> (vector-length path) 0)
-                (send cowboy move (vector-ref path 0))
-                (printf "can't move~%")))))
-      
+          (define target (<: 'tile (vector-ref pianos 0)))
+          (define loc (<: 'tile cowboy))
+          (define path (find-path loc target))
+          (if (> (vector-length path) 0)
+              (send cowboy move (vector-ref path 0))
+              (printf "can't move~%"))
+
+          (when (vector-member target (send loc neighbors))
+            (send cowboy play (<: 'furnishing target)))))
+
+      (set-field! pianos this (vector-filter-not (cut <: 'is-destroyed <>)
+                                                 pianos))
+
       (printf "ending turn~%")
       #t)))

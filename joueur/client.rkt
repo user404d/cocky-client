@@ -170,7 +170,7 @@
       (with-handlers ([exn:fail? (cut ai-errored <> (string-append "AI errored in order '"
                                                                    (hash-ref data 'name)
                                                                    "'.")) ])
-        (define order (string->symbol (hash-ref data 'name)))
+        (define order (string->symbol (camel-to-hyphen (hash-ref data 'name))))
         (define returned (dynamic-send ai order args))
         (send-event "finished" (make-hash `((orderIndex . ,(hash-ref data 'index))
                                             (returned . ,returned))))))
