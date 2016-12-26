@@ -8,7 +8,8 @@
 
 
 (define (pathable tile)
-  (not (or (object? (<: 'furnishing tile))
+  (not (or (<: 'is-balcony tile)
+           (object? (<: 'furnishing tile))
            (object? (<: 'cowboy tile)))))
 
 
