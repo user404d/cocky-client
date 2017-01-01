@@ -54,9 +54,10 @@
 
     (define/public (disconnect)
       (with-handlers ([exn:fail? (cut printf "~a~%" "Bad disconnect.")])
-        (cond [connected (close-input-port (Socket-recv socket))
-                         (close-output-port (Socket-send socket))
-                         (set-field! connected this #f)])))
+        (when connected
+          (close-input-port (Socket-recv socket))
+          (close-output-port (Socket-send socket))
+          (set-field! connected this #f))))
 
     ;; Prepare for new game
 
@@ -72,9 +73,9 @@
     ;; Sending data to server
 
     (define/private (send-raw bstr)
-      (cond [print-io
-             (printf "~a~a~a~a~%" (ansi #:text 'magenta)
-                     "TO SERVER <-- " (bytes->string/locale bstr) reset)])
+      (when print-io
+        (printf "~a~a~a~a~%" (ansi #:text 'magenta)
+                "TO SERVER <-- " (bytes->string/locale bstr) reset))
       (with-handlers ([exn:fail? disconnected-unexpectedly])
         (write-bytes bstr (Socket-send socket))))
 
@@ -100,33 +101,27 @@
     (define/public (wait-for-event event)
       (define data null)
       (for ([_ (in-naturals)]
-            #:break
-            (cond [(and (wait-for-new-events)
-                        (> (vector-length event-stack) 0))
-                   (define sent (vector-ref event-stack 0))
-                   (set-field! event-stack this (vector-drop event-stack 1))
-                   (if (and event (string=? (hash-ref sent 'event) event))
-                       (begin (set! data (hash-ref sent 'data)) #t)
-                       (begin (auto-handle (hash-ref sent 'event)
-                                           (hash-ref sent 'data)) #f))]
-                  [else #f]))
-        #t)
+            #:when (and (wait-for-new-events) (> (vector-length event-stack) 0)))
+        (match/values (vector-split-at event-stack 1)
+                      [((vector sent) rest)
+                       (set-field! event-stack this rest)
+                       (if (and event (string=? (hash-ref sent 'event) event))
+                           (set! data (hash-ref sent 'data))
+                           (auto-handle (hash-ref sent 'event)
+                                        (hash-ref sent 'data)))])
+        #:break (not (null? data)) #t)
       data)
 
 
     (define/private (wait-for-new-events)
-      (cond [(= (vector-length event-stack) 0)
-             (with-handlers ([exn:fail:read? malformed-json]
-                             [exn:fail? cannot-read-socket])
-               (for ([_ (in-naturals)])
-                 #:break
-                 (let ([num-bytes-recvd
-                        (read-bytes-avail! recvd (Socket-recv socket))])
-                   (if (> num-bytes-recvd 0)
-                       (process-incoming-events num-bytes-recvd)
-                       #f))
-                 #f))]
-            [else #t]))
+      (with-handlers ([exn:fail:read? malformed-json]
+                      [exn:fail? cannot-read-socket])
+        (for ([_ (in-naturals)]
+              #:break (> (vector-length event-stack) 0))
+          (define num-bytes-recvd
+            (read-bytes-avail! recvd (Socket-recv socket)))
+          (when (> num-bytes-recvd 0)
+            (process-incoming-events num-bytes-recvd)))))
 
 
     (define/private (process-incoming-events num-bytes-recvd)
@@ -138,15 +133,14 @@
             (values potential-events (bytes))
             (values (drop-right potential-events 1) (last potential-events))))
       (set-field! recvd-buffer this partial)
-      (cond [print-io (printf "~a~a~a~a~%"
-                              (ansi #:text 'magenta)
-                              "FROM SERVER --> "
-                              events
-                              reset)])
+      (when print-io
+        (printf "~a~a~a~a~%"
+                (ansi #:text 'magenta)
+                "FROM SERVER --> " events
+                reset))
       (set-field! event-stack this
                   (for/vector #:length (length events) ([event events])
-                              (bytes->jsexpr event)))
-      (> (vector-length event-stack) 0))
+                              (bytes->jsexpr event))))
 
     ;; Play game
 
@@ -180,8 +174,9 @@
       (define can-play? (null? (get-field player ai)))
       (with-handlers ([exn:fail? (cut delta-merge-failure <> "Error applying delta state.")])
         (send game-manager apply-delta-state delta))
-      (cond [can-play? (with-handlers ([exn:fail? (cut <> "AI errored in game-update after delta.")])
-                         (send ai game-updated))]))
+      (when can-play?
+        (with-handlers ([exn:fail? (cut <> "AI errored in game-update after delta.")])
+          (send ai game-updated))))
 
 
     (define/public (auto-handle-invalid data)
@@ -208,8 +203,8 @@
               "Game is over." message "because" reason reset)
       (with-handlers ([exn:fail? (cut ai-errored <> "AI errored in (ended).")])
         (send ai ended won? reason))
-      (cond [(and (hash? data) (hash-has-key? data 'message))
-             (printf "~a~a~a~%" (ansi #:text 'cyan) (hash-ref data 'message) reset)])
+      (when (and (hash? data) (hash-has-key? data 'message))
+        (printf "~a~a~a~%" (ansi #:text 'cyan) (hash-ref data 'message) reset))
       (disconnect)
       (exit 0))
 
