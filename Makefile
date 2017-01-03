@@ -6,7 +6,7 @@ build/client:
 
 build/games:
 	@echo "Building games..."
-	@find games -path "*/main.rkt" | xargs raco make
+	@find games -path "*/main.rkt" | xargs raco make -j 8 --
 
 clean:
 	@find . -name compiled | xargs rm -r

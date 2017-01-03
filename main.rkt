@@ -38,7 +38,7 @@
        "the requested game session you want to play on the server"
        (hash-set! args 'session-name session-name)]
       [("-g" "--gameSettings") game-settings
-       "Any settings for the game server to force. Must be url parms formatted (key=value&otherKey=otherValue)"
+       "Any settings for the game server to force. Must be url params formatted (key=value&otherKey=otherValue)"
        (hash-set! args 'game-settings game-settings)]
       [("-d" "--printIO") "(debugging) print IO through the TCP socket to the terminal"
        (hash-set! args 'print-io #t)]
