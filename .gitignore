@@ -46,6 +46,7 @@ client.d
 # Build results
 compiled/
 joueur/compiled/
+games/*/compiled/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/

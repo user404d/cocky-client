@@ -1,4 +1,6 @@
-#lang racket
+#lang racket/base
+
+(require racket/class)
 
 (provide base-game%)
 

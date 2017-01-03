@@ -1,9 +1,15 @@
-#lang racket
+#lang racket/base
+
+(require (only-in racket/class
+                  dynamic-get-field
+                  dynamic-set-field!
+                  is-a?
+                  object%))
 
 (provide (all-defined-out))
 
 
-;;; Helper Functions
+;; Helper Functions
 
 (define (is-game-obj-ref? d)
   (and (hash? d) (= (hash-count d) 1) (hash-has-key? d 'id)))

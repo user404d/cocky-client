@@ -1,7 +1,9 @@
-#lang racket
+#lang racket/base
 
 (require "base-game.rkt"
          "base-game-object.rkt"
+         racket/class
+         racket/match
          "utilities.rkt")
 
 (provide game-manager%)
@@ -23,18 +25,20 @@
 
 
     (define/public (apply-delta-state delta)
-      (cond [(hash-has-key? delta 'gameObjects)
-             (init-game-objects (hash-ref delta 'gameObjects))])
+      (when (hash-has-key? delta 'gameObjects)
+        (init-game-objects (hash-ref delta 'gameObjects)))
       (merge-object game delta))
 
 
+    (define (inflate-new-objects k v)
+      (define key (symbol->string k))
+      (when (not (send game get-game-object key))
+        (send game set-game-object key
+              (hash-ref v 'gameObjectName))))
+
+
     (define/private (init-game-objects delta-game-objects)
-      (hash-for-each delta-game-objects
-                     (lambda (k v)
-                       (let ([key (symbol->string k)])
-                         (cond [(not (send game get-game-object key))
-                                (send game set-game-object key
-                                      (hash-ref v 'gameObjectName))])))))
+      (hash-for-each delta-game-objects inflate-new-objects))
 
 
     (define/private (merge-object state delta)

@@ -1,10 +1,17 @@
-#lang racket
+#lang racket/base
 
 (require "ansi-color-coder.rkt"
-         racket/date
          "game-manager.rkt"
          "handle-error.rkt"
          json
+         racket/class
+         (only-in racket/date
+                  current-date
+                  date->string)
+         racket/list
+         racket/match
+         racket/tcp
+         racket/vector
          "serializer.rkt"
          srfi/26
          "utilities.rkt")
@@ -93,8 +100,8 @@
       (send-event "run" (make-hash `((caller . ,caller)
                                      (functionName . ,function-name)
                                      (args . ,args))))
-      (let ([ran-data (wait-for-event "ran")])
-        (deserialize ran-data game)))
+      (define ran-data (wait-for-event "ran"))
+      (deserialize ran-data game))
 
     ;; Process incoming events
 
@@ -138,9 +145,9 @@
                 (ansi #:text 'magenta)
                 "FROM SERVER --> " events
                 reset))
-      (set-field! event-stack this
-                  (for/vector #:length (length events) ([event events])
-                              (bytes->jsexpr event))))
+      (set-field! event-stack this (for/vector #:length (length events)
+                                               ([event events])
+                                               (bytes->jsexpr event))))
 
     ;; Play game
 

@@ -1,8 +1,9 @@
-#lang racket
+#lang racket/base
 
 (require "ansi-color-coder.rkt"
          "base-game.rkt"
-         "base-game-object.rkt")
+         "base-game-object.rkt"
+         racket/class)
 
 (provide base-ai%)
 

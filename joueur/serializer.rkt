@@ -1,7 +1,10 @@
-#lang racket
+#lang racket/base
 
 (require "base-game.rkt"
          "base-game-object.rkt"
+         (only-in racket/class
+                  is-a?
+                  send)
          "utilities.rkt")
 
 (provide serialize deserialize)
