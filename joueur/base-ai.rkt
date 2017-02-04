@@ -12,7 +12,15 @@
   (class object%
     (super-new)
     (init-field game)
-    (field [name "Racket Player"])
+    (field [name "Racket Player"]
+           [settings (make-hash)])
+
+    (define/private (set-settings ai-settings-str)
+      (define settings-pairs
+        (regexp-split "&" ai-settings-str))
+      (for ([pair settings-pairs])
+        (match (regexp-split "=" pair)
+          [(list key value) (hash-set! settings key)])))
     
     (define/public (get-name) name)
     

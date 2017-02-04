@@ -12,6 +12,7 @@
                           (password . "")
                           (session-name . "*")
                           (game-settings . "")
+                          (ai-settings . "")
                           (print-io . #f)
                           (game-name . ""))))
 
@@ -40,6 +41,9 @@
       [("-g" "--gameSettings") game-settings
        "Any settings for the game server to force. Must be url params formatted (key=value&otherKey=otherValue)"
        (hash-set! args 'game-settings game-settings)]
+      [("-a" "--aiSettings") ai-settings
+       "Any settings for the AI. Must be url params formatted (key=value&otherKey=otherValue)"
+       (hash-set! args 'ai-settings ai-settings)]
       [("-d" "--printIO") "(debugging) print IO through the TCP socket to the terminal"
        (hash-set! args 'print-io #t)]
       #:args (game-name)
