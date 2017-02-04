@@ -36,7 +36,7 @@
 (define ai%
   (class base-ai%
     (super-new)
-    (inherit-field game)
+    (inherit-field game settings)
     (field [player null]
            [pianos (vector)])
 
@@ -74,4 +74,7 @@
                                                  pianos))
 
       (printf "ending turn~%")
-      #t)))
+      #t)
+
+    (define/override (ended won reason)
+      (printf "~a" settings))))

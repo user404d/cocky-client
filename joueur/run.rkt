@@ -56,7 +56,7 @@
         (send AI get-name)))
   (define index (hash-ref args 'player-id))
   (define game-settings (hash-ref args 'game-settings))
-  (send AI set-ai-settings (hash-ref args 'ai-settings))
+  (send AI set-settings (hash-ref args 'ai-settings))
   (send client setup Game AI)
   (send client send-event "play" (make-hash `((gameName . ,game-name)
                                               (password . ,~password)

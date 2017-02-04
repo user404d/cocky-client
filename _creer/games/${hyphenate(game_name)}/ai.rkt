@@ -25,7 +25,7 @@ ${merge(";; ", "requires", ";; any additional requires you want can be required 
      ; @instance
      |#
 
-  (inherit-field game)
+  (inherit-field game settings)
 
   (field
 

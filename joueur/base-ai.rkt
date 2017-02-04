@@ -3,7 +3,8 @@
 (require "ansi-color-coder.rkt"
          "base-game.rkt"
          "base-game-object.rkt"
-         racket/class)
+         racket/class
+         racket/match)
 
 (provide base-ai%)
 
@@ -15,12 +16,12 @@
     (field [name "Racket Player"]
            [settings (make-hash)])
 
-    (define/private (set-settings ai-settings-str)
+    (define/public (set-settings ai-settings-str)
       (define settings-pairs
         (regexp-split "&" ai-settings-str))
       (for ([pair settings-pairs])
         (match (regexp-split "=" pair)
-          [(list key value) (hash-set! settings key)])))
+          [(list key value) (hash-set! settings key value)])))
     
     (define/public (get-name) name)
     
