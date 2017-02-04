@@ -5,15 +5,15 @@
          racket/hash)
 
 
-(define args '#hasheq((server . "localhost")
-                      (port . "3000")
-                      (player-name . "")
-                      (player-id . 0)
-                      (password . "")
-                      (session-name . "*")
-                      (game-settings . "")
-                      (print-io . #f)
-                      (game-name . "")))
+(define args (make-hash '((server . "localhost")
+                          (port . "3000")
+                          (player-name . "")
+                          (player-id . 0)
+                          (password . "")
+                          (session-name . "*")
+                          (game-settings . "")
+                          (print-io . #f)
+                          (game-name . ""))))
 
 
 (run (command-line
@@ -44,6 +44,5 @@
        (hash-set! args 'print-io #t)]
       #:args (game-name)
       
-      (hash-set args 'game-name game-name)))
-
-
+      (hash-set! args 'game-name game-name)
+      args))
