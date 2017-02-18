@@ -1,10 +1,7 @@
 # Racket MegaMiner Joueur Client
 
-ヽ༼ຈل͜ຈ༽ﾉ ヽ༼ຈل͜ຈ༽ﾉ ヽ༼ຈل͜ຈ༽ﾉ ヽ༼ຈل͜ຈ༽ﾉ
-
-xD
-
-ヽ༼ຈل͜ຈ༽ﾉ ヽ༼ຈل͜ຈ༽ﾉ ヽ༼ຈل͜ຈ༽ﾉ ヽ༼ຈل͜ຈ༽ﾉ
+The `cocky-client` name is a remnant from when this project was being written in Chicken Scheme. When this project is
+incorporated into [@siggame](https://github.com/siggame) it will be renamed to Joueur.rkt.
 
 ```shell
 $ make -j
